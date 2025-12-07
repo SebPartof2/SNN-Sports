@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NHL Ticker - Live Tracker</title>
+    <link rel="icon" href="icon.png" type="image/png" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: transparent;
+        color: #fff;
+        overflow: hidden;
+        height: 50px;
+        width: 1920px;
+        margin: 0;
+        padding: 0;
+      }
+
+      .ticker-container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+        display: flex;
+      }
+
+      .fixed-branding {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 300px;
+        height: 50px;
+        background: #1a1a1a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        z-index: 100;
+      }
+
+      .sliding-content {
+        margin-left: 300px;
+        width: calc(100% - 300px);
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .game-slide {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 1;
+        transform: translateX(0);
+        transition: transform 0.6s ease-in-out, opacity 0.6s ease-in-out;
+      }
+
+      .game-slide.entering {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+
+      .game-slide.active {
+        transform: translateX(0);
+        opacity: 1;
+      }
+
+      .game-slide.exiting {
+        transform: translateX(-100%);
+        opacity: 0;
+      }
+
+      .ticker-content {
+        display: flex;
+        width: 100%;
+        height: 100%;
+      }
+
+      .team-sections-container {
+        display: flex;
+        width: 800px;
+        height: 100%;
+        position: relative;
+      }
+
+      .sliding-ticker-content {
+        display: flex;
+        width: 100%;
+        height: 100%;
+      }
+
+      /* Column 1: Branding */
+      .branding-section {
+        width: 300px;
+        background: #1a1a1a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      .brand-logo {
+        width: 30px;
+        height: 30px;
+        object-fit: contain;
+      }
+
+      .brand-text {
+        font-size: 18px;
+        font-weight: bold;
+        color: #fff;
+        line-height: 1.2;
+      }
+
+      /* Columns 2 & 3: Team sections */
+      .team-section {
+        width: 400px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 20px;
+        position: relative;
+        background: transparent;
+      }
+
+      .team-info {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .team-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .team-right {
+        display: flex;
+        align-items: center;
+      }
+
+      .team-logo-ticker {
+        width: 30px;
+        height: 30px;
+        object-fit: contain;
+      }
+
+      .team-name-ticker {
+        transform: translateY(-3px);
+        font-size: 20px;
+        font-weight: bold;
+        color: #fff;
+        text-shadow: 1px 1px 2px rgb(150, 150, 150);
+      }
+
+      .team-score-ticker {
+        transform: translateY(-3px);
+        font-size: 35px;
+        font-weight: bold;
+        color: #fff;
+        text-shadow: 1px 1px 2px rgba(255, 255, 255);
+        min-width: 20px;
+        text-align: center;
+      }
+
+      .team-score-ticker.winner {
+        color: #fff;
+        text-shadow: 1px 1px 2px rgba(255, 255, 255);
+      }
+
+      .team-score-ticker.loser {
+        color: #aaa;
+        text-shadow: 1px 1px 2px #777;
+      }
+
+      .team-record {
+        font-size: 12px;
+        color: #fff;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        font-weight: bold;
+      }
+
+      /* Column 4: Status section */
+      .status-section {
+        flex: 1;
+        background: #2a2a2a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 15px;
+      }
+
+      .status-content {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .period-indicator {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        font-size: 12px;
+        font-weight: bold;
+        color: #fff;
+      }
+
+      .period-number {
+        font-size: 17.5px;
+        font-weight: bold;
+      }
+
+      .period-suffix {
+        font-size: 10px;
+        vertical-align: super;
+      }
+
+      .clock-info {
+        margin-left: 15px;
+        font-size: 20px;
+        color: #fff;
+        font-weight: bold;
+      }
+
+      .shots-info {
+        margin-left: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        font-size: 13.25px;
+        color: #ccc;
+      }
+
+      .power-play-indicator {
+        margin-left: 15px;
+        font-size: 15px;
+        font-weight: bold;
+        color: #ffd700;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+      }
+
+      .final-indicator {
+        font-size: 22.5px;
+        font-weight: bold;
+        color: #ffd700;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+      }
+
+      .scheduled-time {
+        font-size: 14px;
+        font-weight: bold;
+        color: #00aaff;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+      }
+
+      .loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        font-size: 24px;
+        color: #666;
+      }
+
+      /* Animation keyframes */
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateX(100%);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      @keyframes slideOut {
+        from {
+          opacity: 1;
+          transform: translateX(0);
+        }
+        to {
+          opacity: 0;
+          transform: translateX(-100%);
+        }
+      }
+
+      .slide-in {
+        animation: slideIn 0.6s ease-in-out;
+      }
+
+      .slide-out {
+        animation: slideOut 0.6s ease-in-out;
+      }
+    </style>
+    <script src="ticker.js"></script>
+  </head>
+  <body>
+    <!-- Fixed Branding Column -->
+    <div class="fixed-branding">
+      <img src="../assets/33115791.png" alt="SPORTSHEART" class="brand-logo" onerror="this.style.display='none'">
+      <div class="brand-text">SPORTSHEART</div>
+    </div>
+
+    <!-- Sliding Content Container -->
+    <div class="ticker-container">
+      <div class="sliding-content">
+        <div class="loading">Loading NHL Games...</div>
+      </div>
+    </div>
+
+    <script>
+      const BASE_URL = "https://corsproxy.io/?url=https://api-web.nhle.com/v1";
+
+      const teamColors = {
+        "24": "#F47A38", "53": "#8C2633", "6": "#FFB81C", "7": "#002654",
+        "20": "#C8102E", "12": "#CC0000", "16": "#CF0A2C", "21": "#6F263D",
+        "29": "#041E42", "25": "#006847", "17": "#CE1126", "22": "#041E42",
+        "13": "#041E42", "26": "#111111", "30": "#154734", "8": "#AF1E2D",
+        "18": "#FFB81C", "1": "#CE1126", "2": "#00539B", "3": "#0038A8",
+        "9": "#C8102E", "4": "#F74902", "5": "#FCB514", "28": "#006D75",
+        "55": "#001628", "19": "#002F87", "14": "#002868", "10": "#00205B",
+        "23": "#00205B", "54": "#B4975A", "15": "#041E42", "52": "#041E42"
+      };
+
+      let currentGameIndex = 0;
+      let games = [];
+      let slideInterval;
+      let currentSlide = null;
+
+      // Function to get ticker speed from URL parameter or localStorage
+      function getTickerSpeed() {
+        // Check URL parameters first (for OBS usage)
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlSpeed = urlParams.get('speed');
+
+        if (urlSpeed && !isNaN(urlSpeed)) {
+          const speed = Math.max(1, Math.min(30, parseInt(urlSpeed)));
+          return speed * 1000; // Convert to milliseconds
+        }
+
+        // Fall back to localStorage
+        const savedSpeed = localStorage.getItem('nhl-ticker-speed');
+        const speed = savedSpeed ? parseInt(savedSpeed) : 5; // Default to 5 seconds
+        return Math.max(1, Math.min(30, speed)) * 1000; // Convert to milliseconds
+      }
+
+      // Function to update ticker speed dynamically
+      function updateTickerSpeed() {
+        if (slideInterval) {
+          clearInterval(slideInterval);
+          const speed = getTickerSpeed();
+          slideInterval = setInterval(showNextGame, speed);
+        }
+      }
+
+      // Listen for storage changes to update speed in real-time
+      window.addEventListener('storage', function(e) {
+        if (e.key === 'nhl-ticker-speed') {
+          updateTickerSpeed();
+        }
+      });
+
+      function getAdjustedDateForNHL() {
+        const now = new Date();
+        const estNow = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+
+        if (estNow.getHours() < 2) {
+          estNow.setDate(estNow.getDate() - 1);
+        }
+
+        const adjustedDate = estNow.getFullYear() + "-" +
+                             String(estNow.getMonth() + 1).padStart(2, "0") + "-" +
+                             String(estNow.getDate()).padStart(2, "0");
+
+        return adjustedDate;
+      }
+
+      function getPeriodSuffix(period) {
+        if (period === 1) return 'st';
+        if (period === 2) return 'nd';
+        if (period === 3) return 'rd';
+        return 'th';
+      }
+
+      function formatTickerTime(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+          timeZone: "America/New_York"
+        });
+      }
+
+      async function createGameSlide(game) {
+        const { awayTeam, homeTeam, gameState, period, clock, id } = game;
+
+        // Get team colors
+        const awayColor = teamColors[awayTeam.id] || "#333";
+        const homeColor = teamColors[homeTeam.id] || "#333";
+
+        // Get team logos
+        const awayLogo = awayTeam.logo || `https://assets.nhle.com/logos/nhl/svg/${awayTeam.abbrev}_light.svg`;
+        const homeLogo = homeTeam.logo || `https://assets.nhle.com/logos/nhl/svg/${homeTeam.abbrev}_light.svg`;
+
+        let statusContent = '';
+        let gameClass = '';
+        let isScheduled = false;
+        let isFinished = false;
+
+        // Determine game state
+        if (gameState === "LIVE" || gameState === "CRIT") {
+          // Live game
+          const periodNum = period || 1;
+          const timeRemaining = clock?.timeRemaining || "20:00";
+          const inIntermission = clock?.inIntermission || false;
+
+          let periodText = '';
+          if (periodNum === 4) {
+            periodText = 'OT';
+          } else if (periodNum > 4) {
+            periodText = `${periodNum - 3}OT`;
+          } else {
+            periodText = `${periodNum}<span class="period-suffix">${getPeriodSuffix(periodNum)}</span>`;
+          }
+
+          // Get shots on goal
+          const awaySOG = awayTeam.sog || 0;
+          const homeSOG = homeTeam.sog || 0;
+
+          // Check for power play situation
+          let powerPlayInfo = '';
+          if (game.situationCode && game.situationCode !== "0000") {
+            powerPlayInfo = '<div class="power-play-indicator">PP</div>';
+          }
+
+          statusContent = `
+            <div class="period-indicator">
+              <div class="period-number">${periodText}</div>
+              <div style="font-size: 10px;">${inIntermission ? 'INT' : 'PER'}</div>
+            </div>
+            <div class="clock-info">${inIntermission ? 'END' : timeRemaining}</div>
+            <div class="shots-info">
+              <div>SOG</div>
+              <div>${awayTeam.abbrev}: ${awaySOG} ${homeTeam.abbrev}: ${homeSOG}</div>
+            </div>
+            ${powerPlayInfo}
+          `;
+          gameClass = 'live-game';
+
+        } else if (gameState === "FUT" || gameState === "PRE") {
+          // Scheduled game
+          const startTime = formatTickerTime(game.startTimeUTC);
+          statusContent = `<div class="scheduled-time">${startTime} EST</div>`;
+          gameClass = 'scheduled-game';
+          isScheduled = true;
+
+        } else if (gameState === "FINAL" || gameState === "OFF") {
+          // Finished game
+          const periodNum = period || 3;
+          let finalText = 'FINAL';
+          if (periodNum > 3) {
+            finalText = periodNum === 4 ? 'FINAL/OT' : `FINAL/${periodNum - 3}OT`;
+          }
+          statusContent = `<div class="final-indicator">${finalText}</div>`;
+          gameClass = 'finished-game';
+          isFinished = true;
+        }
+
+        // Determine score colors based on winner/loser
+        let awayScoreClass = '';
+        let homeScoreClass = '';
+
+        if (isFinished || gameClass === 'live-game') {
+          const awayScore = awayTeam.score || 0;
+          const homeScore = homeTeam.score || 0;
+
+          if (awayScore > homeScore) {
+            awayScoreClass = 'winner';
+            homeScoreClass = 'loser';
+          } else if (homeScore > awayScore) {
+            homeScoreClass = 'winner';
+            awayScoreClass = 'loser';
+          }
+        }
+
+        // Get team records (if available)
+        const awayRecord = awayTeam.record || '';
+        const homeRecord = homeTeam.record || '';
+
+        // Create seamless gradient across both team sections
+        const teamGradient = `linear-gradient(90deg, ${awayColor} 0%, ${awayColor} 40%, ${homeColor} 60%, ${homeColor} 100%)`;
+
+        return `
+          <div class="game-slide ${gameClass}">
+            <div class="sliding-ticker-content">
+              <!-- Team Sections Container with Gradient -->
+              <div class="team-sections-container" style="background: ${teamGradient};">
+                <!-- Column 2: Away Team -->
+                <div class="team-section">
+                  <div class="team-info">
+                    <div class="team-left">
+                      <img src="${awayLogo}" alt="${awayTeam.abbrev}" class="team-logo-ticker" onerror="this.src='icon.png'">
+                      <span class="team-name-ticker">${awayTeam.abbrev}</span>
+                    </div>
+                    <div class="team-right">
+                      ${isScheduled ?
+                        `<span class="team-record">${awayRecord}</span>` :
+                        `<span class="team-score-ticker ${awayScoreClass}">${awayTeam.score || 0}</span>`
+                      }
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Column 3: Home Team -->
+                <div class="team-section">
+                  <div class="team-info">
+                    <div class="team-left">
+                      <img src="${homeLogo}" alt="${homeTeam.abbrev}" class="team-logo-ticker" onerror="this.src='icon.png'">
+                      <span class="team-name-ticker">${homeTeam.abbrev}</span>
+                    </div>
+                    <div class="team-right">
+                      ${isScheduled ?
+                        `<span class="team-record">${homeRecord}</span>` :
+                        `<span class="team-score-ticker ${homeScoreClass}">${homeTeam.score || 0}</span>`
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Column 4: Status -->
+              <div class="status-section">
+                <div class="status-content">
+                  ${statusContent}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      async function fetchGames() {
+        const today = getAdjustedDateForNHL();
+        const url = `${BASE_URL}/schedule/${today}`;
+
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+          const allGames = data.gameWeek?.flatMap(week => week.games) || [];
+
+          // Filter to only include today's games by comparing the game date
+          const todaysGames = allGames.filter(game => {
+            // Extract date from game.gameDate (format: "YYYY-MM-DD")
+            const gameDate = game.gameDate || game.startTimeUTC.split('T')[0];
+            return gameDate === today;
+          });
+
+          // Separate games by status and sort by time
+          const liveGames = todaysGames.filter(game =>
+            game.gameState === "LIVE" || game.gameState === "CRIT"
+          ).sort((a, b) => new Date(a.startTimeUTC) - new Date(b.startTimeUTC));
+
+          const scheduledGames = todaysGames.filter(game =>
+            game.gameState === "FUT" || game.gameState === "PRE"
+          ).sort((a, b) => new Date(a.startTimeUTC) - new Date(b.startTimeUTC));
+
+          const finishedGames = todaysGames.filter(game =>
+            game.gameState === "FINAL" || game.gameState === "OFF"
+          ).sort((a, b) => new Date(a.startTimeUTC) - new Date(b.startTimeUTC));
+
+          // Combine in priority order: Live, Scheduled, Finished
+          games = [...liveGames, ...scheduledGames, ...finishedGames];
+
+          if (games.length === 0) {
+            document.querySelector('.sliding-content').innerHTML = '<div class="loading">No games scheduled for today</div>';
+            return;
+          }
+
+          console.log(`Loaded ${games.length} games for ticker`);
+        } catch (error) {
+          console.error("Error fetching games:", error);
+          document.querySelector('.sliding-content').innerHTML = '<div class="loading">Error loading games</div>';
+        }
+      }
+
+      async function showNextGame() {
+        if (games.length === 0) return;
+
+        // If this is the first game, just show it
+        if (!currentSlide) {
+          const game = games[currentGameIndex];
+          const slideHtml = await createGameSlide(game);
+          document.querySelector('.sliding-content').innerHTML = slideHtml;
+          currentSlide = document.querySelector('.sliding-content .game-slide');
+          currentSlide.classList.add('active');
+          currentGameIndex = (currentGameIndex + 1) % games.length;
+          return;
+        }
+
+        // Create the new slide off-screen to the right
+        const game = games[currentGameIndex];
+        const slideHtml = await createGameSlide(game);
+        document.querySelector('.sliding-content').insertAdjacentHTML('beforeend', slideHtml);
+
+        const newSlide = document.querySelector('.sliding-content .game-slide:last-child');
+        newSlide.classList.add('entering');
+
+        // Force a reflow to ensure the entering class is applied
+        newSlide.offsetHeight;
+
+        // Start the slide animation
+        requestAnimationFrame(() => {
+          newSlide.classList.remove('entering');
+          newSlide.classList.add('active');
+
+          // Start exiting the current slide
+          currentSlide.classList.remove('active');
+          currentSlide.classList.add('exiting');
+
+          // Clean up after animation completes
+          setTimeout(() => {
+            if (currentSlide && currentSlide.parentNode) {
+              currentSlide.remove();
+            }
+            currentSlide = newSlide;
+          }, 600); // Match the CSS transition duration
+        });
+
+        // Move to next game
+        currentGameIndex = (currentGameIndex + 1) % games.length;
+      }
+
+      async function startTicker() {
+        await fetchGames();
+
+        if (games.length > 0) {
+          // Start with the first game
+          await showNextGame();
+
+          // Get speed from URL parameter or localStorage
+          const speed = getTickerSpeed();
+
+          // Set up interval with custom speed
+          slideInterval = setInterval(showNextGame, speed);
+
+          // Refresh games data every 2 seconds
+          setInterval(async () => {
+            await fetchGames();
+          }, 2000);
+        }
+      }
+
+      // Start the ticker when page loads
+      document.addEventListener('DOMContentLoaded', startTicker);
+
+      // Handle window resize to maintain aspect ratio
+      window.addEventListener('resize', () => {
+        // Force 1920x50 aspect ratio
+        if (window.innerWidth !== 1920 || window.innerHeight !== 50) {
+          window.resizeTo(1920, 50);
+        }
+      });
+    </script>
+  </body>
+</html>
