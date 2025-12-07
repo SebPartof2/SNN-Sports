@@ -433,7 +433,7 @@
       }
 
       async function createGameSlide(game) {
-        const { awayTeam, homeTeam, gameState, period, clock, id } = game;
+        const { awayTeam, homeTeam, gameState, id } = game;
 
         // Get team colors
         const awayColor = teamColors[awayTeam.id] || "#333";
@@ -450,10 +450,35 @@
 
         // Determine game state
         if (gameState === "LIVE" || gameState === "CRIT") {
-          // Live game
-          const periodNum = period || 1;
-          const timeRemaining = clock?.timeRemaining || "20:00";
-          const inIntermission = clock?.inIntermission || false;
+          // Live game - fetch detailed game data
+          let periodNum = 1;
+          let timeRemaining = "20:00";
+          let inIntermission = false;
+          let awaySOG = 0;
+          let homeSOG = 0;
+          let lastPlay = "";
+
+          try {
+            const liveRes = await fetch(`${BASE_URL}/gamecenter/${id}/landing`);
+            const liveData = await liveRes.json();
+
+            periodNum = liveData.periodDescriptor?.number || 1;
+            timeRemaining = liveData.clock?.timeRemaining || "20:00";
+            inIntermission = liveData.clock?.inIntermission || false;
+            awaySOG = liveData.awayTeam?.sog || 0;
+            homeSOG = liveData.homeTeam?.sog || 0;
+
+            // Get last play
+            const plays = liveData.plays || [];
+            if (plays.length > 0) {
+              const latestPlay = plays[plays.length - 1];
+              if (latestPlay.typeDescKey) {
+                lastPlay = latestPlay.typeDescKey.replace(/-/g, ' ').toUpperCase();
+              }
+            }
+          } catch (err) {
+            console.error(`Error fetching live data for game ${id}`, err);
+          }
 
           let periodText = '';
           if (periodNum === 4) {
@@ -464,16 +489,6 @@
             periodText = `${periodNum}<span class="period-suffix">${getPeriodSuffix(periodNum)}</span>`;
           }
 
-          // Get shots on goal
-          const awaySOG = awayTeam.sog || 0;
-          const homeSOG = homeTeam.sog || 0;
-
-          // Check for power play situation
-          let powerPlayInfo = '';
-          if (game.situationCode && game.situationCode !== "0000") {
-            powerPlayInfo = '<div class="power-play-indicator">PP</div>';
-          }
-
           statusContent = `
             <div class="period-indicator">
               <div class="period-number">${periodText}</div>
@@ -481,10 +496,9 @@
             </div>
             <div class="clock-info">${inIntermission ? 'END' : timeRemaining}</div>
             <div class="shots-info">
-              <div>SOG</div>
-              <div>${awayTeam.abbrev}: ${awaySOG} ${homeTeam.abbrev}: ${homeSOG}</div>
+              <div>SOG: ${awaySOG}-${homeSOG}</div>
+              ${lastPlay ? `<div style="font-size: 11px;">${lastPlay}</div>` : ''}
             </div>
-            ${powerPlayInfo}
           `;
           gameClass = 'live-game';
 
