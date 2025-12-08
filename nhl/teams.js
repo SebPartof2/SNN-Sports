@@ -322,8 +322,11 @@ const updateGames = async () => {
   }
 };
 
-updateGames(); // Initial fetch
-updateInterval = setInterval(updateGames, 2000);
+// Only run auto-fetch if gamesContainer exists (not on team.html OBS embed page)
+if (document.getElementById("gamesContainer")) {
+  updateGames(); // Initial fetch
+  updateInterval = setInterval(updateGames, 2000);
+}
 
 // Game Card Customization functionality
 const defaultStyles = {
