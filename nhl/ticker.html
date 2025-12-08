@@ -505,7 +505,7 @@
 
         } else if (gameState === "FINAL" || gameState === "OFF") {
           // Finished game
-          const periodNum = period || 3;
+          const periodNum = game.period || game.periodDescriptor?.number || 3;
           let finalText = 'FINAL';
           if (periodNum > 3) {
             finalText = periodNum === 4 ? 'FINAL/OT' : `FINAL/${periodNum - 3}OT`;
