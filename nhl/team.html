@@ -97,10 +97,17 @@
       const today = getAdjustedDateForNHL();
       const url = `https://corsproxy.io/?url=https://api-web.nhle.com/v1/schedule/${today}`;
 
+      console.log(`Fetching game for ${triCode} on ${today}`);
+
       try {
         const res = await fetch(url);
+        console.log(`Response status: ${res.status}`);
+
         const data = await res.json();
+        console.log('API data:', data);
+
         const allGames = data.gameWeek?.flatMap(week => week.games) || [];
+        console.log(`Total games: ${allGames.length}`);
 
         // Filter to only include today's games
         const todaysGames = allGames.filter(game => {
@@ -108,10 +115,14 @@
           return gameDate === today;
         });
 
+        console.log(`Today's games: ${todaysGames.length}`);
+
         const container = document.getElementById("gameBlockContainer");
         const game = todaysGames.find(
           g => g.awayTeam.abbrev === triCode || g.homeTeam.abbrev === triCode
         );
+
+        console.log(`Found game for ${triCode}:`, game);
 
         if (!game) {
           const noGameCard = document.createElement("div");
