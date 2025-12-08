@@ -218,7 +218,22 @@ async function fetchGames() {
     lastScheduleHash = newHash;
 
     const gamesData = JSON.parse(text);
-    const games = gamesData.gameWeek?.[0]?.games || [];
+    const allGames = gamesData.gameWeek?.flatMap(week => week.games) || [];
+
+    // Filter to only include today's games
+    const games = allGames.filter(game => {
+      // Convert UTC time to EST and extract date
+      if (game.gameDate) {
+        return game.gameDate === today;
+      }
+      // If no gameDate, convert startTimeUTC to EST date
+      const gameTimeEST = new Date(game.startTimeUTC).toLocaleString("en-US", { timeZone: "America/New_York" });
+      const gameDateEST = new Date(gameTimeEST);
+      const gameDateStr = gameDateEST.getFullYear() + "-" +
+                          String(gameDateEST.getMonth() + 1).padStart(2, "0") + "-" +
+                          String(gameDateEST.getDate()).padStart(2, "0");
+      return gameDateStr === today;
+    });
 
     // Check if all games are finished
     const allGamesFinished = games.length > 0 && games.every(game => ["FINAL", "OFF"].includes(game.gameState));
