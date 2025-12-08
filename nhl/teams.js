@@ -113,12 +113,19 @@ async function buildGameCard(game) {
 
   let gameSeriesInfo = "";
 
-  const currentPeriod = periodDescriptor.periodType === "OT"
-    ? `${getOrdinalSuffix(periodDescriptor.otPeriods)} OT`
-    : `${getOrdinalSuffix(periodDescriptor.number)} Period`;
+  const isIntermission = clock?.inIntermission || false;
+
+  let currentPeriod = "";
+  if (isIntermission) {
+    currentPeriod = "Intermission";
+  } else if (periodDescriptor.periodType === "OT") {
+    currentPeriod = `${getOrdinalSuffix(periodDescriptor.otPeriods)} OT`;
+  } else {
+    currentPeriod = `${getOrdinalSuffix(periodDescriptor.number)} Period`;
+  }
 
   const timeRemaining = (gameState === "LIVE" || gameState === "CRIT") && clock
-    ? (clock.inIntermission ? "End" : clock.timeRemaining || "00:00")
+    ? (clock.timeRemaining || "00:00")
     : "00:00";
 
   if (["PRE", "FUT"].includes(gameState)) {
